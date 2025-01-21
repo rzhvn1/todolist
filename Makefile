@@ -1,0 +1,17 @@
+build:
+	@go build -o bin/todolist cmd/main.go
+
+test:
+	@go test -v ./...
+
+run: build
+	@./bin/todolist
+
+migration:
+	@migrate create -ext sql -dir cmd/migrate/migrations $(filter-out $@,$(MAKECMDGOALS))
+
+migrate-up:
+	@go run cmd/migrate/main.go up
+
+migrate-down:
+	@go down cmd/migrate/main.go down
