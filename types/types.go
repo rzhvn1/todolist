@@ -33,9 +33,13 @@ type Task struct {
 	ID          int        `json:"id"`
 	Title       string     `json:"title"`
 	Description string     `json:"description"`
-	Status      string     `json:"status"`
+	Status      string     `json:"status" gorm:"default:'pending'"` // pending, in_progress, completed
 	Priority    int        `json:"priority"` // 1 - low, 2 - medium, 3 - high
 	DueDate     *time.Time `json:"due_date"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+type TaskStore interface {
+	
 }
