@@ -31,9 +31,10 @@ type RegisterUserPayload struct {
 
 type Task struct {
 	ID          int        `json:"id"`
+	UserID      *int       `json:"user_id"` // Fixed tag
 	Title       string     `json:"title"`
 	Description string     `json:"description"`
-	Status      string     `json:"status" gorm:"default:'pending'"` // pending, in_progress, completed
+	Status      string     `json:"status"`   // pending, in_progress, completed
 	Priority    int        `json:"priority"` // 1 - low, 2 - medium, 3 - high
 	DueDate     *time.Time `json:"due_date"`
 	CreatedAt   time.Time  `json:"created_at"`
@@ -41,5 +42,5 @@ type Task struct {
 }
 
 type TaskStore interface {
-	
+	GetTasksByUserID(userID int) ([]*Task, error)
 }
