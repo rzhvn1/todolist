@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"todo/types"
 	"todo/utils"
+	"todo/services/auth"
 
 	"github.com/gorilla/mux"
 )
@@ -21,7 +22,7 @@ func NewHandler(store types.TaskStore, userStore types.UserStore) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/tasks/user/{user_id}", h.handleGetTasksByUserID).Methods(http.MethodGet)
+	router.HandleFunc("/tasks/user/{user_id}", auth.WithJWTAuth(h.handleGetTasksByUserID, h.userStore)).Methods(http.MethodGet)
 }
 
 func (h *Handler) handleGetTasksByUserID(w http.ResponseWriter, r *http.Request) {
@@ -39,7 +40,7 @@ func (h *Handler) handleGetTasksByUserID(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	user, err := h.userStore.GetUserByID(userID)
+	user, err := h.store.GetTasksByUserID(userID)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)
 		return
