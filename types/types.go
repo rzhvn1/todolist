@@ -43,4 +43,14 @@ type Task struct {
 
 type TaskStore interface {
 	GetTasksByUserID(userID int) ([]*Task, error)
+	CreateTask(task CreateTaskPayload) error
+}
+
+type CreateTaskPayload struct {
+	UserID      *int       `json:"user_id"`
+	Title       string     `json:"title" validate:"required"`
+	Description string     `json:"description"`
+	Status      string     `json:"status,omitempty" validate:"omitempty,oneof=pending in_progress completed"`
+	Priority    int        `json:"priority"`
+	DueDate     *time.Time `json:"due_date"`
 }

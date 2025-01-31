@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"todo/services/auth"
 	"todo/types"
 	"todo/utils"
-	"todo/services/auth"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 )
 
@@ -23,6 +24,8 @@ func NewHandler(store types.TaskStore, userStore types.UserStore) *Handler {
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/tasks/user/{user_id}", auth.WithJWTAuth(h.handleGetTasksByUserID, h.userStore)).Methods(http.MethodGet)
+
+	router.HandleFunc("/tasks", auth.WithJWTAuth(h.handleCreateTask, h.userStore)).Methods(http.MethodPost)
 }
 
 func (h *Handler) handleGetTasksByUserID(w http.ResponseWriter, r *http.Request) {
@@ -47,5 +50,27 @@ func (h *Handler) handleGetTasksByUserID(w http.ResponseWriter, r *http.Request)
 	}
 
 	utils.WriteJson(w, http.StatusOK, user)
+}
+
+func (h *Handler) handleCreateTask(w http.ResponseWriter, r *http.Request) {
+	var task types.CreateTaskPayload
+	if err := utils.ParseJSON(r, &task); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if err := utils.Validate.Struct(task); err != nil {
+		errors := err.(validator.ValidationErrors)
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
+		return
+	}
+
+	err := h.store.CreateTask(task)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	utils.WriteJson(w, http.StatusCreated, task)
 }
 

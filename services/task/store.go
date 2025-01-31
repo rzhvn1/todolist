@@ -2,6 +2,7 @@ package task
 
 import (
 	"database/sql"
+	"fmt"
 	"todo/types"
 )
 
@@ -32,6 +33,22 @@ func (s *Store) GetTasksByUserID(userID int) ([]*types.Task, error) {
 	return tasks, nil
 }
 
+func (s *Store) CreateTask(task types.CreateTaskPayload) error {
+	if task.Status == "" {
+		task.Status = "pending"
+	}
+	
+	_, err := s.db.Exec(
+		"INSERT INTO tasks (user_id, title, description, status, priority, due_date) VALUES (?, ?, ?, ?, ?, ?)",
+		task.UserID, task.Title, task.Description, task.Status, task.Priority, task.DueDate)
+	fmt.Println("HEre")
+	if err != nil {
+		return err
+	}
+	fmt.Println("NOT HERE")
+	
+	return nil
+}
 
 func scanRowsIntoTask(rows *sql.Rows) (*types.Task, error) {
 	task := new(types.Task)
