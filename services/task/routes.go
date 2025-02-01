@@ -23,76 +23,28 @@ func NewHandler(store types.TaskStore, userStore types.UserStore) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/tasks", auth.WithJWTAuth(h.handleSortTasks, h.userStore)).Methods(http.MethodGet)
+	router.HandleFunc("/tasks", auth.WithJWTAuth(h.handleGetTasks, h.userStore)).Methods(http.MethodGet)
 	router.HandleFunc("/tasks", auth.WithJWTAuth(h.handleCreateTask, h.userStore)).Methods(http.MethodPost)
 	router.HandleFunc("/tasks/{task_id}", auth.WithJWTAuth(h.handleUpdateTask, h.userStore)).Methods(http.MethodPut)
 	router.HandleFunc("/tasks/{task_id}", auth.WithJWTAuth(h.handleDeleteTask, h.userStore)).Methods(http.MethodDelete)
 }
 
-// func (h *Handler) handleGetTasksByUserID(w http.ResponseWriter, r *http.Request) {
-
-// 	vars := mux.Vars(r)
-// 	str, ok := vars["user_id"]
-// 	if !ok {
-// 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing user ID"))
-// 		return
-// 	}
-
-// 	userID, err := strconv.Atoi(str)
-// 	if err != nil {
-// 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user ID"))
-// 		return
-// 	}
-
-// 	user, err := h.store.GetTasksByUserID(userID)
-// 	if err != nil {
-// 		utils.WriteError(w, http.StatusInternalServerError, err)
-// 		return
-// 	}
-
-// 	utils.WriteJson(w, http.StatusOK, user)
-// }
-
-func (h *Handler) handleSortTasks(w http.ResponseWriter, r *http.Request) {
-	// get query params
-	sortBy := r.URL.Query().Get("sort_by")
-	order := r.URL.Query().Get("order")
-
-	// set defaults
-	if sortBy == "" {
-		sortBy = "due_date"
-	}
-	if order == "" {
-		order = "asc"
-	}
-
-	// validate sort_by field
-	allowedSortFields := map[string]bool{
-		"user_id": true,
-		"status": true,
-		"priority": true,
-		"due_date": true,
-	}
-
-	if !allowedSortFields[sortBy] {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid sort_by field"))
+func (h *Handler) handleGetTasks(w http.ResponseWriter, r *http.Request) {
+	allowedSortFields := []string{"user_id", "status", "priority", "due_date"}
+	pagination, err := utils.ParsePaginationParams(r, allowedSortFields)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	// validate order(asc/desc)
-	if order != "asc" && order != "desc" {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid order: must be 'asc' or 'desc'"))
-		return
-	}
-
-	// get sorted tasks
-	tasks, err := h.store.GetSortedTasks(sortBy, order)
+	// get paginated data from store
+	tasks, total, err := h.store.GetPaginatedTasks(pagination)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to get tasks: %v", err))
 		return
 	}
 
-	utils.WriteJson(w, http.StatusOK, tasks)
+	utils.WritePaginatedResponse(w, pagination.Page, pagination.Limit, total, tasks)
 }
 
 func (h *Handler) handleCreateTask(w http.ResponseWriter, r *http.Request) {

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"todo/types"
+	"todo/utils"
 )
 
 type Store struct {
@@ -31,56 +32,37 @@ func (s *Store) GetTaskByID(taskID int) (*types.Task, error) {
 	return t, nil
 }
 
-// func (s *Store) GetTasksByUserID(userID int) ([]*types.Task, error) {
-// 	rows, err := s.db.Query("SELECT * FROM tasks WHERE user_id = ?", userID)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	tasks := make([]*types.Task, 0)
-// 	for rows.Next() {
-// 		t, err := scanRowsIntoTask(rows)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		tasks = append(tasks, t)
-// 	}
-
-// 	return tasks, nil
-// }
-
-func (s *Store) GetSortedTasks(sort_by, order string) ([]types.Task, error) {
-	// protect against SQL injection
-	validSortFields := map[string]string{
-		"user_id": "user_id",
-		"status": "status",
-		"priority": "priority",
-		"due_date": "due_date",
+func (s *Store) GetPaginatedTasks(pagination utils.PaginationParams) ([]types.Task, int, error) {
+	// get total count
+	var total int
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM tasks").Scan(&total); err != nil {
+		return nil, 0, err
 	}
-	sortColumn := validSortFields[sort_by]
 
-	query := fmt.Sprintf("SELECT id, user_id, title, description, status, priority, due_date, created_at, updated_at FROM tasks ORDER BY %s %s", sortColumn, order)
-	
-	rows, err := s.db.Query(query)
+	// dynamic query with safe params
+	query := fmt.Sprintf(`
+	SELECT id, user_id, title, description, status, priority, due_date, created_at, updated_at
+	FROM tasks
+	ORDER BY %s %s
+	LIMIT ? OFFSET ?`, pagination.SortBy, pagination.Order)
+
+	rows, err := s.db.Query(query, pagination.Limit, pagination.Offset)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-
 	defer rows.Close()
 
-	// parse rows into task slice
+	// map db rows to struct
 	var tasks []types.Task
 	for rows.Next() {
 		t, err := scanRowsIntoTask(rows)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
-
 		tasks = append(tasks, *t)
 	}
 
-	return tasks, nil
+	return tasks, total, nil
 }
 
 func (s *Store) CreateTask(task types.CreateTaskPayload) error {
@@ -91,13 +73,13 @@ func (s *Store) CreateTask(task types.CreateTaskPayload) error {
 	_, err := s.db.Exec(
 		"INSERT INTO tasks (user_id, title, description, status, priority, due_date) VALUES (?, ?, ?, ?, ?, ?)",
 		task.UserID, task.Title, task.Description, task.Status, task.Priority, task.DueDate)
-	
+
 	return err
 }
 
 func (s *Store) UpdateTask(taskID int, task types.UpdateTaskPayload) error {
 	_, err := s.db.Exec(
-		"UPDATE tasks SET user_id = ?, title = ?, description = ?, status = ?, priority = ?, due_date = ? WHERE id = ?", 
+		"UPDATE tasks SET user_id = ?, title = ?, description = ?, status = ?, priority = ?, due_date = ? WHERE id = ?",
 		task.UserID, task.Title, task.Description, task.Status, task.Priority, task.DueDate, taskID)
 
 	return err
@@ -116,7 +98,7 @@ func (s *Store) DeleteTask(taskID int) (int64, error) {
 
 	return rowsAffected, nil
 }
- 
+
 func scanRowsIntoTask(rows *sql.Rows) (*types.Task, error) {
 	task := new(types.Task)
 

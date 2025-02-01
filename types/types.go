@@ -2,6 +2,7 @@ package types
 
 import (
 	"time"
+	"todo/utils"
 )
 
 type User struct {
@@ -45,7 +46,7 @@ type Task struct {
 
 type TaskStore interface {
 	GetTaskByID(taskID int) (*Task, error)
-	GetSortedTasks(sort_by, order string) ([]Task, error)
+	GetPaginatedTasks(pagination utils.PaginationParams) ([]Task, int, error)
 	CreateTask(task CreateTaskPayload) error
 	UpdateTask(taskID int, task UpdateTaskPayload) error
 	DeleteTask(taskID int) (int64, error)
