@@ -51,9 +51,9 @@ type TaskStore interface {
 type CreateTaskPayload struct {
 	UserID      *int       `json:"user_id"`
 	Title       string     `json:"title" validate:"required"`
-	Description string     `json:"description"`
+	Description *string     `json:"description"`
 	Status      string     `json:"status,omitempty" validate:"omitempty,oneof=pending in_progress completed"`
-	Priority    int        `json:"priority"`
+	Priority    int        `json:"priority" validate:"required"`
 	DueDate     *time.Time `json:"due_date"`
 }
 

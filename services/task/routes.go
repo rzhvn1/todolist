@@ -106,6 +106,17 @@ func (h *Handler) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
 		return
 	}
+
+	if task.UserID != nil {
+		_, err := h.userStore.GetUserByID(*task.UserID)
+		if err != nil {
+			utils.WriteError(w, http.StatusNotFound, fmt.Errorf("user not found"))
+			return
+		}
+
+	}
+	
+
 	if task.Title == nil {
 		task.Title = &existingTask.Title
 	}
