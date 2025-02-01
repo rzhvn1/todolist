@@ -2,6 +2,7 @@ package task
 
 import (
 	"database/sql"
+	"fmt"
 	"todo/types"
 )
 
@@ -30,20 +31,53 @@ func (s *Store) GetTaskByID(taskID int) (*types.Task, error) {
 	return t, nil
 }
 
-func (s *Store) GetTasksByUserID(userID int) ([]*types.Task, error) {
-	rows, err := s.db.Query("SELECT * FROM tasks WHERE user_id = ?", userID)
+// func (s *Store) GetTasksByUserID(userID int) ([]*types.Task, error) {
+// 	rows, err := s.db.Query("SELECT * FROM tasks WHERE user_id = ?", userID)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	tasks := make([]*types.Task, 0)
+// 	for rows.Next() {
+// 		t, err := scanRowsIntoTask(rows)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+
+// 		tasks = append(tasks, t)
+// 	}
+
+// 	return tasks, nil
+// }
+
+func (s *Store) GetSortedTasks(sort_by, order string) ([]types.Task, error) {
+	// protect against SQL injection
+	validSortFields := map[string]string{
+		"user_id": "user_id",
+		"status": "status",
+		"priority": "priority",
+		"due_date": "due_date",
+	}
+	sortColumn := validSortFields[sort_by]
+
+	query := fmt.Sprintf("SELECT id, user_id, title, description, status, priority, due_date, created_at, updated_at FROM tasks ORDER BY %s %s", sortColumn, order)
+	
+	rows, err := s.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
 
-	tasks := make([]*types.Task, 0)
+	defer rows.Close()
+
+	// parse rows into task slice
+	var tasks []types.Task
 	for rows.Next() {
 		t, err := scanRowsIntoTask(rows)
 		if err != nil {
 			return nil, err
 		}
 
-		tasks = append(tasks, t)
+		tasks = append(tasks, *t)
 	}
 
 	return tasks, nil

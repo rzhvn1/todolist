@@ -1,6 +1,8 @@
 package types
 
-import "time"
+import (
+	"time"
+)
 
 type User struct {
 	ID        int       `json:"id"`
@@ -43,7 +45,7 @@ type Task struct {
 
 type TaskStore interface {
 	GetTaskByID(taskID int) (*Task, error)
-	GetTasksByUserID(userID int) ([]*Task, error)
+	GetSortedTasks(sort_by, order string) ([]Task, error)
 	CreateTask(task CreateTaskPayload) error
 	UpdateTask(taskID int, task UpdateTaskPayload) error
 	DeleteTask(taskID int) (int64, error)
