@@ -14,7 +14,7 @@ import (
 )
 
 type Handler struct {
-	store types.TaskStore
+	store     types.TaskStore
 	userStore types.UserStore
 }
 
@@ -109,7 +109,6 @@ func (h *Handler) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
-	
 
 	if task.Title == nil {
 		task.Title = &existingTask.Title
@@ -163,4 +162,3 @@ func (h *Handler) handleDeleteTask(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
-

@@ -74,23 +74,23 @@ func ParsePaginationParams(r *http.Request, allowedSortFields []string) (Paginat
 	offset := (page - 1) * limit
 
 	return PaginationParams{
-		Page: page,
-		Limit: limit,
+		Page:   page,
+		Limit:  limit,
 		SortBy: sortBy,
-		Order: order,
+		Order:  order,
 		Offset: offset,
 	}, nil
 }
 
 func WritePaginatedResponse(w http.ResponseWriter, page, limit, total int, data interface{}) {
-	totalPages := (total + limit - 1)/limit
+	totalPages := (total + limit - 1) / limit
 
 	response := PaginatedResponse{
-		Page: page,
-		Limit: limit,
-		Total: total,
+		Page:       page,
+		Limit:      limit,
+		Total:      total,
 		TotalPages: totalPages,
-		Data: data,
+		Data:       data,
 	}
 
 	WriteJson(w, http.StatusOK, response)
