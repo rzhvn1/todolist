@@ -27,6 +27,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 
 	router.HandleFunc("/tasks", auth.WithJWTAuth(h.handleCreateTask, h.userStore)).Methods(http.MethodPost)
 	router.HandleFunc("/tasks/{task_id}", auth.WithJWTAuth(h.handleUpdateTask, h.userStore)).Methods(http.MethodPut)
+	router.HandleFunc("/tasks/{task_id}", auth.WithJWTAuth(h.handleDeleteTask, h.userStore)).Methods(http.MethodDelete)
 }
 
 func (h *Handler) handleGetTasksByUserID(w http.ResponseWriter, r *http.Request) {
@@ -141,5 +142,32 @@ func (h *Handler) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 
 	updatedTask, _ := h.store.GetTaskByID(taskID)
 	utils.WriteJson(w, http.StatusOK, updatedTask)
+}
+
+func (h *Handler) handleDeleteTask(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	str, ok := vars["task_id"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing task ID"))
+		return
+	}
+
+	taskID, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid task ID"))
+		return
+	}
+
+	rowsAffected, err := h.store.DeleteTask(taskID)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to delete task: %v", err))
+		return
+	}
+	if rowsAffected == 0 {
+		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("task not found"))
+		return
+	}
+	
+	w.WriteHeader(http.StatusNoContent)
 }
 

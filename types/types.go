@@ -46,6 +46,7 @@ type TaskStore interface {
 	GetTasksByUserID(userID int) ([]*Task, error)
 	CreateTask(task CreateTaskPayload) error
 	UpdateTask(taskID int, task UpdateTaskPayload) error
+	DeleteTask(taskID int) (int64, error)
 }
 
 type CreateTaskPayload struct {

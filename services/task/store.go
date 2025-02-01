@@ -68,6 +68,20 @@ func (s *Store) UpdateTask(taskID int, task types.UpdateTaskPayload) error {
 
 	return err
 }
+
+func (s *Store) DeleteTask(taskID int) (int64, error) {
+	result, err := s.db.Exec("DELETE FROM tasks WHERE id = ?", taskID)
+	if err != nil {
+		return 0, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+
+	return rowsAffected, nil
+}
  
 func scanRowsIntoTask(rows *sql.Rows) (*types.Task, error) {
 	task := new(types.Task)
