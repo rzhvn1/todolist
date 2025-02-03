@@ -14,7 +14,7 @@ import (
 )
 
 type Handler struct {
-	store types.TaskStore
+	store     types.TaskStore
 	userStore types.UserStore
 }
 
@@ -23,34 +23,28 @@ func NewHandler(store types.TaskStore, userStore types.UserStore) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/tasks/user/{user_id}", auth.WithJWTAuth(h.handleGetTasksByUserID, h.userStore)).Methods(http.MethodGet)
-
+	router.HandleFunc("/tasks", auth.WithJWTAuth(h.handleGetTasks, h.userStore)).Methods(http.MethodGet)
 	router.HandleFunc("/tasks", auth.WithJWTAuth(h.handleCreateTask, h.userStore)).Methods(http.MethodPost)
 	router.HandleFunc("/tasks/{task_id}", auth.WithJWTAuth(h.handleUpdateTask, h.userStore)).Methods(http.MethodPut)
+	router.HandleFunc("/tasks/{task_id}", auth.WithJWTAuth(h.handleDeleteTask, h.userStore)).Methods(http.MethodDelete)
 }
 
-func (h *Handler) handleGetTasksByUserID(w http.ResponseWriter, r *http.Request) {
-
-	vars := mux.Vars(r)
-	str, ok := vars["user_id"]
-	if !ok {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing user ID"))
-		return
-	}
-
-	userID, err := strconv.Atoi(str)
+func (h *Handler) handleGetTasks(w http.ResponseWriter, r *http.Request) {
+	allowedSortFields := []string{"user_id", "status", "priority", "due_date"}
+	pagination, err := utils.ParsePaginationParams(r, allowedSortFields)
 	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid user ID"))
+		utils.WriteError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	user, err := h.store.GetTasksByUserID(userID)
+	// get paginated data from store
+	tasks, total, err := h.store.GetPaginatedTasks(pagination)
 	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err)
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to get tasks: %v", err))
 		return
 	}
 
-	utils.WriteJson(w, http.StatusOK, user)
+	utils.WritePaginatedResponse(w, pagination.Page, pagination.Limit, total, tasks)
 }
 
 func (h *Handler) handleCreateTask(w http.ResponseWriter, r *http.Request) {
@@ -106,6 +100,16 @@ func (h *Handler) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
 		return
 	}
+
+	if task.UserID != nil {
+		_, err := h.userStore.GetUserByID(*task.UserID)
+		if err != nil {
+			utils.WriteError(w, http.StatusNotFound, fmt.Errorf("user not found"))
+			return
+		}
+
+	}
+
 	if task.Title == nil {
 		task.Title = &existingTask.Title
 	}
@@ -132,3 +136,29 @@ func (h *Handler) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJson(w, http.StatusOK, updatedTask)
 }
 
+func (h *Handler) handleDeleteTask(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	str, ok := vars["task_id"]
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("missing task ID"))
+		return
+	}
+
+	taskID, err := strconv.Atoi(str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid task ID"))
+		return
+	}
+
+	rowsAffected, err := h.store.DeleteTask(taskID)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to delete task: %v", err))
+		return
+	}
+	if rowsAffected == 0 {
+		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("task not found"))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

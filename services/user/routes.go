@@ -31,7 +31,6 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("users/{userID}", auth.WithJWTAuth(h.handleGetUser, h.store)).Methods(http.MethodGet)
 }
 
-
 func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var user types.LoginUserPayload
 	if err := utils.ParseJSON(r, &user); err != nil {
@@ -95,9 +94,9 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 
 	err = h.store.CreateUser(types.User{
 		FirstName: user.FirstName,
-		LastName: user.LastName,
-		Email: user.Email,
-		Password: hashedPassword,
+		LastName:  user.LastName,
+		Email:     user.Email,
+		Password:  hashedPassword,
 	})
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err)

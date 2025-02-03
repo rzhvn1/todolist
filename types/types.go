@@ -1,6 +1,9 @@
 package types
 
-import "time"
+import (
+	"time"
+	"todo/utils"
+)
 
 type User struct {
 	ID        int       `json:"id"`
@@ -43,17 +46,18 @@ type Task struct {
 
 type TaskStore interface {
 	GetTaskByID(taskID int) (*Task, error)
-	GetTasksByUserID(userID int) ([]*Task, error)
+	GetPaginatedTasks(pagination utils.PaginationParams) ([]Task, int, error)
 	CreateTask(task CreateTaskPayload) error
 	UpdateTask(taskID int, task UpdateTaskPayload) error
+	DeleteTask(taskID int) (int64, error)
 }
 
 type CreateTaskPayload struct {
 	UserID      *int       `json:"user_id"`
 	Title       string     `json:"title" validate:"required"`
-	Description string     `json:"description"`
+	Description *string    `json:"description"`
 	Status      string     `json:"status,omitempty" validate:"omitempty,oneof=pending in_progress completed"`
-	Priority    int        `json:"priority"`
+	Priority    int        `json:"priority" validate:"required"`
 	DueDate     *time.Time `json:"due_date"`
 }
 
